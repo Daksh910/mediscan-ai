@@ -63,5 +63,3 @@ npm run dev
 \- GitHub: https://github.com/Daksh910
 
 \- LinkedIn: https://www.linkedin.com/in/daksh-trivedi-68bab8259
-
-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
