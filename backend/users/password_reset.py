@@ -87,7 +87,7 @@ class PasswordResetRequestView(APIView):
             "expires": timezone.now() + timedelta(hours=1),
         }
 
-        reset_link = f"http://localhost:8080/reset-password?token={token}"
+        reset_link = f"https://mediscan-ai-beta.vercel.app/reset-password?token={token}"
 
         html_body = f"""
 <!DOCTYPE html>

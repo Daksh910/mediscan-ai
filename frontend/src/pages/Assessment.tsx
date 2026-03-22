@@ -4,10 +4,11 @@ import { AppLayout } from '@/components/AppLayout';
 import { GlassCard } from '@/components/GlassCard';
 import { RiskBadge } from '@/components/RiskBadge';
 import { CountUp } from '@/components/CountUp';
-import { Search, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { Search, ChevronRight, ChevronLeft, Check, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { generateAssessmentPDF } from '@/lib/pdfReport';
 
 const binaryFields = [
   { key: 'high_bp', label: 'High Blood Pressure', desc: 'Diagnosed with hypertension' },
@@ -55,6 +56,35 @@ const getStatusColor = (status: string) => {
   return '#00ff88';
 };
 
+// Reusable slider component with fixed pointer events
+const Slider = ({
+  label, value, min, max, onChange, display,
+}: {
+  label: string; value: number; min: number; max: number;
+  onChange: (v: number) => void; display: React.ReactNode;
+}) => (
+  <div>
+    <div className="flex justify-between mb-2">
+      <label className="text-xs text-slate-400 uppercase tracking-widest">{label}</label>
+      <span className="text-xs font-mono">{display}</span>
+    </div>
+    <div style={{ position: 'relative', zIndex: 20, cursor: 'pointer' }}>
+      <input
+        type="range" min={min} max={max} value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        className="w-full accent-cyan-400"
+        style={{
+          position: 'relative',
+          zIndex: 20,
+          cursor: 'pointer',
+          pointerEvents: 'auto',
+          touchAction: 'none',
+        }}
+      />
+    </div>
+  </div>
+);
+
 const Assessment = () => {
   const [step, setStep] = useState(1);
   const [patients, setPatients] = useState<any[]>([]);
@@ -74,10 +104,7 @@ const Assessment = () => {
   });
 
   useEffect(() => {
-    if (!localStorage.getItem('access_token')) {
-      navigate('/login');
-      return;
-    }
+    if (!localStorage.getItem('access_token')) { navigate('/login'); return; }
     const load = async () => {
       try {
         const { data } = await api.get(`/api/patients/?search=${patientSearch}`);
@@ -87,9 +114,7 @@ const Assessment = () => {
           const match = list.find((p: any) => String(p.id) === preselectedPatientId);
           if (match) { setSelectedPatient(match); setStep(2); }
         }
-      } catch {
-        setPatients([]);
-      }
+      } catch { setPatients([]); }
     };
     load();
   }, [patientSearch, navigate]);
@@ -100,28 +125,27 @@ const Assessment = () => {
     try {
       const payload = { patient: selectedPatient.id, ...formData };
       const { data } = await api.post('/api/patients/assessments/create/', payload);
-
-      // FIX: risk_score comes as 0-1 from API, convert to 0-100 for display
       const processedResult = {
         ...data,
         risk_score_display: Math.round((data.risk_score || 0) * 100 * 10) / 10,
         risk_level: data.risk_level || 'low',
-        // risk_factors from API: [{factor, value, status, note}]
         risk_factors: Array.isArray(data.risk_factors) ? data.risk_factors : [],
-        // model_breakdown from API: {rf: 0.58, gb: 0.61, xgb: 0.63, lgb: 0.59}
         model_breakdown: data.model_breakdown || {},
         recommendations: data.recommendations || '',
       };
-
       setResult(processedResult);
       setStep(3);
       toast.success(`Risk Score: ${processedResult.risk_score_display}% — ${processedResult.risk_level.toUpperCase()}`);
-    } catch (err) {
+    } catch {
       toast.error('Assessment failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  const set = (key: string) => (v: number) => setFormData(f => ({ ...f, [key]: v }));
+
+  const selectClass = "w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-foreground focus:border-cyan-400 outline-none";
 
   return (
     <AppLayout>
@@ -143,34 +167,24 @@ const Assessment = () => {
         </div>
 
         <AnimatePresence mode="wait">
-          {/* STEP 1 — Select Patient */}
+          {/* STEP 1 */}
           {step === 1 && (
             <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <GlassCard className="p-6">
                 <h3 className="font-semibold text-foreground mb-4">Select Patient</h3>
                 <div className="relative mb-4">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    value={patientSearch}
-                    onChange={e => setPatientSearch(e.target.value)}
+                  <input value={patientSearch} onChange={e => setPatientSearch(e.target.value)}
                     placeholder="Search by name..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-transparent border-b border-slate-700 text-foreground focus:border-cyan-400 outline-none text-sm transition-colors"
-                  />
+                    className="w-full pl-10 pr-4 py-2.5 bg-transparent border-b border-slate-700 text-foreground focus:border-cyan-400 outline-none text-sm transition-colors" />
                 </div>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {patients.length === 0 && (
-                    <p className="text-slate-500 text-sm text-center py-8">No patients found</p>
-                  )}
+                  {patients.length === 0 && <p className="text-slate-500 text-sm text-center py-8">No patients found</p>}
                   {patients.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => setSelectedPatient(p)}
+                    <button key={p.id} onClick={() => setSelectedPatient(p)}
                       className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
-                        selectedPatient?.id === p.id
-                          ? 'border-cyan-400 bg-cyan-400/10'
-                          : 'border-slate-700/50 hover:border-slate-600'
-                      }`}
-                    >
+                        selectedPatient?.id === p.id ? 'border-cyan-400 bg-cyan-400/10' : 'border-slate-700/50 hover:border-slate-600'
+                      }`}>
                       <div>
                         <span className="text-foreground font-medium">{p.first_name} {p.last_name}</span>
                         <span className="text-slate-400 text-xs ml-2">{p.age || 'N/A'} yrs</span>
@@ -180,11 +194,8 @@ const Assessment = () => {
                   ))}
                 </div>
                 <div className="flex justify-end mt-6">
-                  <button
-                    onClick={() => selectedPatient && setStep(2)}
-                    disabled={!selectedPatient}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-                  >
+                  <button onClick={() => selectedPatient && setStep(2)} disabled={!selectedPatient}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity">
                     Next <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -192,7 +203,7 @@ const Assessment = () => {
             </motion.div>
           )}
 
-          {/* STEP 2 — Health Indicators */}
+          {/* STEP 2 */}
           {step === 2 && (
             <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <GlassCard className="p-6">
@@ -204,22 +215,22 @@ const Assessment = () => {
                 {/* Binary Toggles */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
                   {binaryFields.map(f => (
-                    <div key={f.key} className="flex items-center justify-between p-3 rounded-xl border border-slate-700/50 hover:border-slate-600 transition-all">
+                    <div key={f.key}
+                      className="flex items-center justify-between p-3 rounded-xl border border-slate-700/50"
+                      style={{ pointerEvents: 'auto' }}>
                       <div>
                         <p className="text-sm text-foreground">{f.label}</p>
                         <p className="text-xs text-slate-400">{f.desc}</p>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 flex-shrink-0 ml-3">
                         {['No', 'Yes'].map((label, val) => (
-                          <button
-                            key={label}
+                          <button key={label}
                             onClick={() => setFormData(fd => ({ ...fd, [f.key]: val }))}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                               formData[f.key] === val
                                 ? 'bg-cyan-500/20 border border-cyan-400 text-cyan-400'
                                 : 'border border-slate-700 text-slate-400 hover:border-slate-500'
-                            }`}
-                          >
+                            }`}>
                             {label}
                           </button>
                         ))}
@@ -228,83 +239,58 @@ const Assessment = () => {
                   ))}
                 </div>
 
-                {/* Sliders */}
+                {/* Sliders — wrapped in isolated containers */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <label className="text-xs text-slate-400 uppercase tracking-widest">BMI</label>
-                      <span className="text-xs font-mono" style={{ color: getBMICategory(formData.bmi).color }}>
+                  <Slider
+                    label="BMI" value={formData.bmi} min={10} max={98}
+                    onChange={set('bmi')}
+                    display={
+                      <span style={{ color: getBMICategory(formData.bmi).color }}>
                         {formData.bmi} — {getBMICategory(formData.bmi).label}
                       </span>
-                    </div>
-                    <input type="range" min={10} max={98} value={formData.bmi}
-                      onChange={e => setFormData(f => ({ ...f, bmi: Number(e.target.value) }))}
-                      className="w-full accent-cyan-400" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <label className="text-xs text-slate-400 uppercase tracking-widest">General Health</label>
-                      <span className="text-xs font-mono text-foreground">{genHealthLabels[formData.gen_health - 1]}</span>
-                    </div>
-                    <input type="range" min={1} max={5} value={formData.gen_health}
-                      onChange={e => setFormData(f => ({ ...f, gen_health: Number(e.target.value) }))}
-                      className="w-full accent-cyan-400" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <label className="text-xs text-slate-400 uppercase tracking-widest">Mental Health Bad Days</label>
-                      <span className="text-xs font-mono text-foreground">{formData.ment_health}/30</span>
-                    </div>
-                    <input type="range" min={0} max={30} value={formData.ment_health}
-                      onChange={e => setFormData(f => ({ ...f, ment_health: Number(e.target.value) }))}
-                      className="w-full accent-cyan-400" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <label className="text-xs text-slate-400 uppercase tracking-widest">Physical Health Bad Days</label>
-                      <span className="text-xs font-mono text-foreground">{formData.phys_health}/30</span>
-                    </div>
-                    <input type="range" min={0} max={30} value={formData.phys_health}
-                      onChange={e => setFormData(f => ({ ...f, phys_health: Number(e.target.value) }))}
-                      className="w-full accent-cyan-400" />
-                  </div>
+                    }
+                  />
+                  <Slider
+                    label="General Health" value={formData.gen_health} min={1} max={5}
+                    onChange={set('gen_health')}
+                    display={<span className="text-foreground">{genHealthLabels[formData.gen_health - 1]}</span>}
+                  />
+                  <Slider
+                    label="Mental Health Bad Days" value={formData.ment_health} min={0} max={30}
+                    onChange={set('ment_health')}
+                    display={<span className="text-foreground">{formData.ment_health}/30</span>}
+                  />
+                  <Slider
+                    label="Physical Health Bad Days" value={formData.phys_health} min={0} max={30}
+                    onChange={set('phys_health')}
+                    display={<span className="text-foreground">{formData.phys_health}/30</span>}
+                  />
                 </div>
 
                 {/* Dropdowns */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  {[
-                    { label: 'Sex', key: 'sex', options: [{ label: 'Female', value: 0 }, { label: 'Male', value: 1 }] },
-                  ].map(({ label, key, options }) => (
-                    <div key={key}>
-                      <label className="text-xs text-slate-400 uppercase tracking-widest mb-2 block">{label}</label>
-                      <select value={formData[key]}
-                        onChange={e => setFormData(f => ({ ...f, [key]: Number(e.target.value) }))}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-foreground focus:border-cyan-400 outline-none">
-                        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                    </div>
-                  ))}
+                  <div>
+                    <label className="text-xs text-slate-400 uppercase tracking-widest mb-2 block">Sex</label>
+                    <select value={formData.sex} onChange={e => setFormData(f => ({ ...f, sex: Number(e.target.value) }))} className={selectClass}>
+                      <option value={0}>Female</option>
+                      <option value={1}>Male</option>
+                    </select>
+                  </div>
                   <div>
                     <label className="text-xs text-slate-400 uppercase tracking-widest mb-2 block">Age Category</label>
-                    <select value={formData.age_category}
-                      onChange={e => setFormData(f => ({ ...f, age_category: Number(e.target.value) }))}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-foreground focus:border-cyan-400 outline-none">
+                    <select value={formData.age_category} onChange={e => setFormData(f => ({ ...f, age_category: Number(e.target.value) }))} className={selectClass}>
                       {ageCategories.map((c, i) => <option key={c} value={i + 1}>{c}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-xs text-slate-400 uppercase tracking-widest mb-2 block">Education Level</label>
-                    <select value={formData.education}
-                      onChange={e => setFormData(f => ({ ...f, education: Number(e.target.value) }))}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-foreground focus:border-cyan-400 outline-none">
+                    <select value={formData.education} onChange={e => setFormData(f => ({ ...f, education: Number(e.target.value) }))} className={selectClass}>
                       {educationLevels.map((l, i) => <option key={l} value={i + 1}>{l}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-xs text-slate-400 uppercase tracking-widest mb-2 block">Income Level</label>
-                    <select value={formData.income}
-                      onChange={e => setFormData(f => ({ ...f, income: Number(e.target.value) }))}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-foreground focus:border-cyan-400 outline-none">
+                    <select value={formData.income} onChange={e => setFormData(f => ({ ...f, income: Number(e.target.value) }))} className={selectClass}>
                       {incomeLevels.map((l, i) => <option key={l} value={i + 1}>{l}</option>)}
                     </select>
                   </div>
@@ -320,7 +306,7 @@ const Assessment = () => {
                     {loading ? (
                       <><span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> Analyzing...</>
                     ) : (
-                      <> Predict Risk <ChevronRight className="w-4 h-4" /></>
+                      <>Predict Risk <ChevronRight className="w-4 h-4" /></>
                     )}
                   </button>
                 </div>
@@ -332,16 +318,10 @@ const Assessment = () => {
           {step === 3 && result && (
             <motion.div key="step3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
               <div className="space-y-6">
-                {/* Gauge */}
                 <GlassCard className="p-8 flex flex-col items-center">
-                  <RiskGauge
-                    score={result.risk_score_display}
-                    level={result.risk_level}
-                    color={getRiskColor(result.risk_level)}
-                  />
+                  <RiskGauge score={result.risk_score_display} level={result.risk_level} color={getRiskColor(result.risk_level)} />
                 </GlassCard>
 
-                {/* Risk Factors + Ensemble */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <GlassCard className="p-6">
                     <h3 className="font-semibold text-foreground mb-4">Risk Factors</h3>
@@ -350,16 +330,11 @@ const Assessment = () => {
                     ) : (
                       <div className="space-y-3">
                         {result.risk_factors.map((f: any, i: number) => (
-                          <motion.div
-                            key={i}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
+                          <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: i * 0.08 }}
-                            className="flex items-center justify-between p-3 rounded-xl border border-slate-700/50"
-                          >
+                            className="flex items-center justify-between p-3 rounded-xl border border-slate-700/50">
                             <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 rounded-full flex-shrink-0"
-                                style={{ background: getStatusColor(f.status) }} />
+                              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: getStatusColor(f.status) }} />
                               <div>
                                 <p className="text-sm text-foreground">{f.factor}</p>
                                 {f.note && <p className="text-xs text-slate-400">{f.note}</p>}
@@ -368,11 +343,7 @@ const Assessment = () => {
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <span className="text-xs font-mono text-slate-400">{String(f.value)}</span>
                               <span className="text-xs px-2 py-0.5 rounded-full border"
-                                style={{
-                                  color: getStatusColor(f.status),
-                                  borderColor: getStatusColor(f.status) + '40',
-                                  background: getStatusColor(f.status) + '15',
-                                }}>
+                                style={{ color: getStatusColor(f.status), borderColor: getStatusColor(f.status) + '40', background: getStatusColor(f.status) + '15' }}>
                                 {f.status}
                               </span>
                             </div>
@@ -389,7 +360,6 @@ const Assessment = () => {
                     ) : (
                       <div className="space-y-4">
                         {Object.entries(result.model_breakdown).map(([model, score]: [string, any], i) => {
-                          // score is 0-1 from API, convert to percentage
                           const pct = Math.round(Number(score) * 100 * 10) / 10;
                           return (
                             <motion.div key={model} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.15 }}>
@@ -398,44 +368,42 @@ const Assessment = () => {
                                 <span className="font-mono text-foreground">{pct}%</span>
                               </div>
                               <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <motion.div
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${Math.min(pct, 100)}%` }}
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(pct, 100)}%` }}
                                   transition={{ duration: 0.8, delay: i * 0.15 }}
                                   className="h-full rounded-full"
-                                  style={{
-                                    background: getRiskColor(result.risk_level),
-                                    boxShadow: `0 0 8px ${getRiskColor(result.risk_level)}60`,
-                                  }}
-                                />
+                                  style={{ background: getRiskColor(result.risk_level), boxShadow: `0 0 8px ${getRiskColor(result.risk_level)}60` }} />
                               </div>
                             </motion.div>
                           );
                         })}
-                        <p className="text-xs text-slate-500 mt-4 text-center">
-                          Each bar shows individual model's diabetes probability estimate
-                        </p>
+                        <p className="text-xs text-slate-500 mt-4 text-center">Each bar shows individual model's diabetes probability estimate</p>
                       </div>
                     )}
                   </GlassCard>
                 </div>
 
-                {/* Recommendations */}
                 <GlassCard className="p-6" style={{ borderLeft: `4px solid ${getRiskColor(result.risk_level)}` }}>
                   <h3 className="font-semibold text-foreground mb-3">Clinical Recommendations</h3>
                   <p className="text-sm text-slate-400 leading-relaxed">{result.recommendations}</p>
                   <div className="mt-4 p-3 rounded-lg bg-slate-800/50 text-xs text-slate-500">
                     Model Confidence: {Math.round((result.model_confidence || 0) * 100)}% |
-                    Threshold Used: {result.threshold_used || 'N/A'} |
                     Assessment ID: #{result.id}
                   </div>
                 </GlassCard>
 
-                {/* Actions */}
                 <div className="flex flex-wrap gap-3 justify-center">
                   <button onClick={() => navigate(`/patients/${selectedPatient?.id}`)}
                     className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-medium text-sm hover:opacity-90 transition-opacity">
                     Save & View Patient
+                  </button>
+                  <button onClick={async () => {
+                    try {
+                      await generateAssessmentPDF(result, selectedPatient);
+                      toast.success('PDF downloaded!');
+                    } catch { toast.error('PDF generation failed'); }
+                  }}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-700 text-foreground text-sm hover:bg-slate-800 transition-colors">
+                    <Download className="w-4 h-4" /> Download PDF
                   </button>
                   <button onClick={() => { setStep(1); setResult(null); setSelectedPatient(null); }}
                     className="px-6 py-3 rounded-xl border border-slate-700 text-foreground text-sm hover:bg-slate-800 transition-colors">
@@ -455,80 +423,48 @@ const Assessment = () => {
   );
 };
 
-// Risk Gauge SVG
 const RiskGauge = ({ score, level, color }: { score: number; level: string; color: string }) => {
   const clampedScore = Math.min(Math.max(score, 0), 100);
-  const r = 85;
-  const cx = 120;
-  const cy = 110;
-
+  const r = 85; const cx = 120; const cy = 110;
   const polarToXY = (angleDeg: number) => ({
     x: cx + r * Math.cos((angleDeg * Math.PI) / 180),
     y: cy + r * Math.sin((angleDeg * Math.PI) / 180),
   });
-
   const startAngle = -180;
-  const endAngle = 0;
   const fillAngle = startAngle + (clampedScore / 100) * 180;
-
   const describeArc = (start: number, end: number) => {
-    const s = polarToXY(start);
-    const e = polarToXY(end);
+    const s = polarToXY(start); const e = polarToXY(end);
     const large = end - start > 180 ? 1 : 0;
     return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
   };
-
   const needleTip = polarToXY(fillAngle);
-
   const levelLabel = level ? level.charAt(0).toUpperCase() + level.slice(1).toLowerCase() : '';
-
   return (
     <div className="relative flex flex-col items-center">
       <svg viewBox="0 0 240 130" width="340" height="200">
-        {/* Track */}
-        <path d={describeArc(startAngle, endAngle)} fill="none"
-          stroke="rgba(255,255,255,0.06)" strokeWidth="14" strokeLinecap="round" />
-        {/* Colored zones */}
+        <path d={describeArc(-180, 0)} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="14" strokeLinecap="round" />
         <path d={describeArc(-180, -135)} fill="none" stroke="#00ff8830" strokeWidth="14" strokeLinecap="round" />
         <path d={describeArc(-135, -90)} fill="none" stroke="#ffb80030" strokeWidth="14" strokeLinecap="round" />
         <path d={describeArc(-90, -45)} fill="none" stroke="#ff475730" strokeWidth="14" strokeLinecap="round" />
         <path d={describeArc(-45, 0)} fill="none" stroke="#9d4edd30" strokeWidth="14" strokeLinecap="round" />
-        {/* Active fill */}
-        <motion.path
-          d={describeArc(startAngle, fillAngle)}
-          fill="none" stroke={color} strokeWidth="14" strokeLinecap="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
+        <motion.path d={describeArc(startAngle, fillAngle)} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round"
+          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
           transition={{ duration: 1.5, ease: 'easeOut' }}
-          style={{ filter: `drop-shadow(0 0 10px ${color})` }}
-        />
-        {/* Needle */}
-        <motion.line
-          x1={cx} y1={cy}
-          x2={needleTip.x} y2={needleTip.y}
+          style={{ filter: `drop-shadow(0 0 10px ${color})` }} />
+        <motion.line x1={cx} y1={cy} x2={needleTip.x} y2={needleTip.y}
           stroke={color} strokeWidth="2.5" strokeLinecap="round"
-          initial={{ rotate: -180, originX: `${cx}px`, originY: `${cy}px` }}
-          animate={{ rotate: 0 }}
-          transition={{ duration: 1.5, ease: 'easeOut' }}
-        />
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} />
         <circle cx={cx} cy={cy} r="5" fill={color} style={{ filter: `drop-shadow(0 0 6px ${color})` }} />
-        {/* Labels */}
         <text x="22" y="118" fill="#4a6080" fontSize="9" textAnchor="middle">LOW</text>
         <text x="218" y="118" fill="#4a6080" fontSize="9" textAnchor="middle">CRITICAL</text>
       </svg>
-
       <div className="text-center -mt-4">
         <p className="text-5xl font-bold font-mono" style={{ color, textShadow: `0 0 20px ${color}80` }}>
           <CountUp end={clampedScore} decimals={1} suffix="%" duration={1500} />
         </p>
         <div className="mt-2">
           <span className="px-4 py-1.5 rounded-full text-sm font-semibold border"
-            style={{
-              color,
-              borderColor: color + '60',
-              background: color + '15',
-              boxShadow: `0 0 15px ${color}30`,
-            }}>
+            style={{ color, borderColor: color + '60', background: color + '15', boxShadow: `0 0 15px ${color}30` }}>
             {levelLabel} RISK
           </span>
         </div>
