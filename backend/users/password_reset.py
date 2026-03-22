@@ -1,14 +1,11 @@
 """
 Password Reset & Change Password — users/password_reset.py
-Improvements:
-- Handles duplicate emails safely with .filter().first()
-- fail_silently=False so errors are visible in Django logs
-- Cleans expired tokens automatically
-- Better error messages
+Uses Brevo HTTP API instead of SMTP (works on Render free tier)
 """
+import os
 import secrets
 import logging
-from django.core.mail import send_mail
+import requests as http_requests
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework.views import APIView
@@ -18,16 +15,82 @@ from .models import CustomUser
 
 logger = logging.getLogger(__name__)
 
-# In-memory token store {token: {user_id, expires}}
 _reset_tokens = {}
 
 
 def _clean_expired_tokens():
-    """Remove expired tokens to prevent memory buildup."""
     now = timezone.now()
     expired = [t for t, d in _reset_tokens.items() if now > d["expires"]]
     for t in expired:
         del _reset_tokens[t]
+
+
+def send_reset_email_brevo(to_email: str, to_name: str, reset_link: str):
+    """Send password reset email via Brevo HTTP API — works on all hosting."""
+    api_key = os.getenv('BREVO_API_KEY', '')
+    if not api_key:
+        raise Exception('BREVO_API_KEY environment variable not set')
+
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:20px;background:#f1f5f9;font-family:'Segoe UI',sans-serif;">
+  <div style="max-width:480px;margin:0 auto;background:#020b18;border-radius:16px;overflow:hidden;border:1px solid rgba(0,212,255,0.15);">
+    <div style="padding:24px;border-bottom:1px solid rgba(0,212,255,0.1);">
+      <h1 style="margin:0;color:#00d4ff;font-size:20px;">MediScan AI</h1>
+      <p style="margin:4px 0 0;color:#64748b;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Clinical Intelligence Platform</p>
+    </div>
+    <div style="padding:28px;">
+      <p style="color:#94a3b8;margin-top:0;">Hello <strong style="color:#e2e8f0;">{to_name}</strong>,</p>
+      <p style="color:#94a3b8;">We received a request to reset your MediScan AI password.</p>
+      <p style="color:#94a3b8;">Click the button below to set a new password. This link is valid for <strong style="color:#e2e8f0;">1 hour</strong>.</p>
+      <div style="text-align:center;margin:28px 0;">
+        <a href="{reset_link}"
+           style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#00d4ff,#2563eb);color:#020b18;font-weight:bold;text-decoration:none;border-radius:12px;font-size:15px;">
+          Reset Password
+        </a>
+      </div>
+      <div style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.1);border-radius:8px;padding:12px;margin-top:16px;">
+        <p style="color:#64748b;font-size:12px;margin:0;">Or copy this link:</p>
+        <p style="color:#00d4ff;font-size:11px;word-break:break-all;margin:4px 0 0;">{reset_link}</p>
+      </div>
+      <p style="color:#334155;font-size:12px;margin-top:20px;">If you didn't request this, you can safely ignore this email.</p>
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid rgba(0,212,255,0.1);text-align:center;">
+      <p style="color:#1e293b;font-size:11px;margin:0;">MediScan AI · Automated Security Alert · Do not reply</p>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    plain_text = (
+        f"Hello {to_name},\n\n"
+        f"Reset your MediScan AI password:\n{reset_link}\n\n"
+        f"Link valid for 1 hour. If you didn't request this, ignore this email.\n\n"
+        f"MediScan AI"
+    )
+
+    response = http_requests.post(
+        'https://api.brevo.com/v3/smtp/email',
+        headers={
+            'api-key': api_key,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        },
+        json={
+            'sender': {'name': 'MediScan AI', 'email': 'dakshtrivedi2@gmail.com'},
+            'to': [{'email': to_email, 'name': to_name}],
+            'subject': 'MediScan AI — Password Reset Request',
+            'htmlContent': html_body,
+            'textContent': plain_text,
+        },
+        timeout=15,
+    )
+
+    if response.status_code not in (200, 201):
+        raise Exception(f'Brevo API error {response.status_code}: {response.text}')
+
+    logger.info(f"Reset email sent to {to_email} via Brevo API")
 
 
 class ChangePasswordView(APIView):
@@ -62,25 +125,17 @@ class PasswordResetRequestView(APIView):
         if not email:
             return Response({"error": "Email is required."}, status=400)
 
-        # Clean expired tokens first
         _clean_expired_tokens()
 
-        # Use filter().first() to safely handle duplicate emails
         user = CustomUser.objects.filter(email__iexact=email).first()
 
-        # Always return same message — don't reveal if email exists
         success_response = Response({
             "message": "If this email is registered, a reset link has been sent."
         })
 
-        if not user:
+        if not user or not user.is_active:
             return success_response
 
-        if not user.is_active:
-            # Don't reveal account is deactivated
-            return success_response
-
-        # Generate secure token
         token = secrets.token_urlsafe(32)
         _reset_tokens[token] = {
             "user_id": user.id,
@@ -89,62 +144,15 @@ class PasswordResetRequestView(APIView):
 
         reset_link = f"https://mediscan-ai-beta.vercel.app/reset-password?token={token}"
 
-        html_body = f"""
-<!DOCTYPE html>
-<html>
-<body style="margin:0;padding:20px;background:#f1f5f9;font-family:'Segoe UI',sans-serif;">
-  <div style="max-width:480px;margin:0 auto;background:#020b18;border-radius:16px;overflow:hidden;border:1px solid rgba(0,212,255,0.15);">
-    <div style="padding:24px;border-bottom:1px solid rgba(0,212,255,0.1);">
-      <h1 style="margin:0;color:#00d4ff;font-size:20px;">MediScan AI</h1>
-      <p style="margin:4px 0 0;color:#64748b;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Clinical Intelligence Platform</p>
-    </div>
-    <div style="padding:28px;">
-      <p style="color:#94a3b8;margin-top:0;">Hello <strong style="color:#e2e8f0;">{user.display_name}</strong>,</p>
-      <p style="color:#94a3b8;">We received a request to reset your MediScan AI password.</p>
-      <p style="color:#94a3b8;">Click the button below to set a new password. This link is valid for <strong style="color:#e2e8f0;">1 hour</strong>.</p>
-      <div style="text-align:center;margin:28px 0;">
-        <a href="{reset_link}"
-           style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#00d4ff,#2563eb);color:#020b18;font-weight:bold;text-decoration:none;border-radius:12px;font-size:15px;">
-          Reset Password
-        </a>
-      </div>
-      <div style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.1);border-radius:8px;padding:12px;margin-top:16px;">
-        <p style="color:#64748b;font-size:12px;margin:0;">Or copy this link into your browser:</p>
-        <p style="color:#00d4ff;font-size:11px;word-break:break-all;margin:4px 0 0;">{reset_link}</p>
-      </div>
-      <p style="color:#334155;font-size:12px;margin-top:20px;">If you didn't request this, you can safely ignore this email. Your password will not change.</p>
-    </div>
-    <div style="padding:16px 24px;border-top:1px solid rgba(0,212,255,0.1);text-align:center;">
-      <p style="color:#1e293b;font-size:11px;margin:0;">MediScan AI · Automated Security Alert · Do not reply</p>
-    </div>
-  </div>
-</body>
-</html>"""
-
-        plain_text = (
-            f"Hello {user.display_name},\n\n"
-            f"Reset your MediScan AI password using this link (valid 1 hour):\n"
-            f"{reset_link}\n\n"
-            f"If you didn't request this, ignore this email.\n\n"
-            f"MediScan AI"
-        )
-
         try:
-            send_mail(
-                subject="MediScan AI — Password Reset Request",
-                message=plain_text,
-                from_email=None,
-                recipient_list=[user.email],
-                html_message=html_body,
-                fail_silently=False,  # Raise errors so they appear in logs
-            )
-            logger.info(f"Password reset email sent to {user.email}")
+            send_reset_email_brevo(user.email, user.display_name, reset_link)
         except Exception as e:
             logger.error(f"Failed to send reset email to {user.email}: {e}")
             return Response(
-        {"error": f"Email failed: {str(e)}"},
-        status=500
-    )
+                {"error": f"Email failed: {str(e)}"},
+                status=500
+            )
+
         return success_response
 
 
@@ -188,7 +196,7 @@ class PasswordResetConfirmView(APIView):
             user.set_password(new)
             user.save()
             del _reset_tokens[token]
-            logger.info(f"Password reset successful for user {user.username}")
+            logger.info(f"Password reset successful for {user.username}")
             return Response({"message": "Password reset successfully. You can now sign in."})
         except CustomUser.DoesNotExist:
             return Response({"error": "User account not found."}, status=404)
