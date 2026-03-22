@@ -142,10 +142,9 @@ class PasswordResetRequestView(APIView):
         except Exception as e:
             logger.error(f"Failed to send reset email to {user.email}: {e}")
             return Response(
-                {"error": "Failed to send email. Please contact administrator."},
-                status=500
-            )
-
+        {"error": f"Email failed: {str(e)}"},
+        status=500
+    )
         return success_response
 
 
