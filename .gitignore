@@ -1,0 +1,18 @@
+# Python / Django
+backend/mediscan_env/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/**/*.pyc
+backend/.env
+backend/staticfiles/
+backend/media/
+backend/ml_engine/ensemble_model.pkl
+backend/ml_engine/metrics.json
+backend/ml_engine/feature_info.json
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
