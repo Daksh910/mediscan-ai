@@ -58,7 +58,7 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #020b18, #030f1e)' }}>
+      style={{ background: 'hsl(34 25% 97%)' }}>
       {Array.from({ length: 15 }).map((_, i) => (
         <div key={i} className="absolute rounded-full bg-cyan-500/20" style={{
           width: Math.random() * 3 + 1, height: Math.random() * 3 + 1,
@@ -82,7 +82,7 @@ const ResetPassword = () => {
             <div className="text-center mb-2">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
                 style={{ background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.2)' }}>
-                <Mail className="w-6 h-6 text-cyan-400" />
+                <Mail className="w-6 h-6 text-green-700" />
               </div>
               <h2 className="text-foreground font-bold text-lg">Forgot Password?</h2>
               <p className="text-slate-400 text-sm mt-1">Enter your email and we'll send a reset link</p>
@@ -94,7 +94,7 @@ const ResetPassword = () => {
             </div>
             <button type="submit" disabled={loading}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm disabled:opacity-50 hover:opacity-90 transition-opacity"
-              style={{ background: 'linear-gradient(135deg, #00d4ff, #2563eb)', boxShadow: '0 0 20px rgba(0,212,255,0.3)' }}>
+              style={{ background: 'hsl(158 42% 22%)', boxShadow: '0 0 20px rgba(0,212,255,0.3)' }}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
               {loading ? 'Sending...' : 'Send Reset Link'}
             </button>
@@ -114,7 +114,7 @@ const ResetPassword = () => {
             </div>
             <h2 className="text-foreground font-bold text-xl">Check Your Email</h2>
             <p className="text-slate-400 text-sm">
-              If <span className="text-cyan-400">{email}</span> is registered, a reset link has been sent. Check your inbox (and spam folder).
+              If <span className="text-green-700">{email}</span> is registered, a reset link has been sent. Check your inbox (and spam folder).
             </p>
             <div className="p-3 rounded-xl bg-slate-800/50 text-xs text-slate-500">
               Link expires in 1 hour
@@ -132,7 +132,7 @@ const ResetPassword = () => {
             <div className="text-center mb-2">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
                 style={{ background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.2)' }}>
-                <Lock className="w-6 h-6 text-cyan-400" />
+                <Lock className="w-6 h-6 text-green-700" />
               </div>
               <h2 className="text-foreground font-bold text-lg">Set New Password</h2>
               <p className="text-slate-400 text-sm mt-1">Enter and confirm your new password</p>
@@ -155,7 +155,7 @@ const ResetPassword = () => {
             </div>
             <button type="submit" disabled={loading}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm disabled:opacity-50 hover:opacity-90 transition-opacity"
-              style={{ background: 'linear-gradient(135deg, #00d4ff, #2563eb)', boxShadow: '0 0 20px rgba(0,212,255,0.3)' }}>
+              style={{ background: 'hsl(158 42% 22%)', boxShadow: '0 0 20px rgba(0,212,255,0.3)' }}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
               {loading ? 'Resetting...' : 'Reset Password'}
             </button>

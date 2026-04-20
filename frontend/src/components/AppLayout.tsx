@@ -1,29 +1,38 @@
-/**
- * Feature 13: Mobile Sidebar (hamburger menu)
- * Replace src/components/AppLayout.tsx with this
- * The mobile sidebar slides in from the left as a drawer
- */
 import { useState } from 'react';
 import { NavLink as RouterNavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, FilePlus, LogOut, Activity, Upload, Menu, X, User } from 'lucide-react';
+import { LayoutDashboard, Users, FilePlus, LogOut, Activity, Upload, Menu, X, User, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const getNavItems = (role: string) => {
-  const base = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/patients', label: 'Patients', icon: Users },
-    { path: '/assessment', label: 'New Assessment', icon: FilePlus },
-    { path: '/bulk-import', label: 'Bulk Import', icon: Upload },
-    { path: '/profile', label: 'My Profile', icon: User },
-  ];
-  return base;
-};
+const navItems = [
+  { path: '/dashboard',   label: 'Dashboard',      icon: LayoutDashboard },
+  { path: '/patients',    label: 'Patients',        icon: Users },
+  { path: '/assessment',  label: 'New Assessment',  icon: FilePlus },
+  { path: '/bulk-import', label: 'Bulk Import',     icon: Upload },
+  { path: '/profile',     label: 'My Profile',      icon: User },
+];
+
+const Logo = () => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{
+      width: 34, height: 34, borderRadius: 10,
+      background: 'hsl(158 42% 22%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: '0 2px 8px hsl(158 42% 22% / 0.3)',
+      flexShrink: 0,
+    }}>
+      <Activity size={17} color="white" />
+    </div>
+    <div>
+      <div style={{ fontFamily: 'Playfair Display, serif', fontWeight: 600, fontSize: 15, color: 'hsl(210 15% 12%)' }}>MediScan AI</div>
+      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'hsl(210 8% 58%)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Clinical Intelligence</div>
+    </div>
+  </div>
+);
 
 const NavContent = ({ onClose }: { onClose?: () => void }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const navItems = getNavItems(user.role || '');
 
   const handleLogout = () => {
     localStorage.clear();
@@ -32,54 +41,50 @@ const NavContent = ({ onClose }: { onClose?: () => void }) => {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-6 border-b border-cyan-900/20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
-              <Activity className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-foreground text-base">MediScan AI</h1>
-            </div>
-          </div>
-          {onClose && (
-            <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-foreground">
-              <X className="w-5 h-5" />
-            </button>
-          )}
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid hsl(34 18% 88%)' }}>
+        <Logo />
       </div>
 
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div className="section-label" style={{ padding: '8px 10px 6px', marginTop: 4 }}>Navigation</div>
         {navItems.map(({ path, label, icon: Icon }) => {
           const active = location.pathname === path;
           return (
-            <RouterNavLink key={path} to={path} onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                active
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-400/20'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-slate-800/50'
-              }`}>
-              <Icon className="w-4 h-4" />
+            <RouterNavLink
+              key={path} to={path} onClick={onClose}
+              className={`nav-link${active ? ' active' : ''}`}
+            >
+              <Icon size={16} />
               {label}
+              {active && <ChevronRight size={14} style={{ marginLeft: 'auto', opacity: 0.5 }} />}
             </RouterNavLink>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-cyan-900/20">
+      <div style={{ padding: '12px 10px', borderTop: '1px solid hsl(34 18% 88%)' }}>
         {user.username && (
-          <div className="mb-3 px-4">
-            <p className="text-sm font-medium text-foreground">
+          <div style={{
+            padding: '10px 12px', borderRadius: 10,
+            background: 'hsl(34 18% 95%)',
+            marginBottom: 8,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'hsl(210 15% 12%)' }}>
               {user.role === 'doctor' ? 'Dr. ' : ''}{user.first_name || user.username}
-            </p>
-            <p className="text-xs text-slate-400 capitalize mt-0.5">{user.role} · {user.department || 'MediScan AI'}</p>
+            </div>
+            <div style={{ fontSize: 11, color: 'hsl(210 8% 58%)', textTransform: 'capitalize', marginTop: 2 }}>
+              {user.role} · {user.department || 'MediScan'}
+            </div>
           </div>
         )}
-        <button onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-slate-400 hover:text-red-400 transition-colors w-full">
-          <LogOut className="w-4 h-4" /> Logout
+        <button
+          onClick={handleLogout}
+          className="nav-link"
+          style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}
+        >
+          <LogOut size={15} />
+          Sign Out
         </button>
       </div>
     </div>
@@ -90,9 +95,13 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen">
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'hsl(34 25% 97%)' }}>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 min-h-screen glass-card rounded-none border-r border-t-0 border-b-0 border-l-0 sticky top-0 h-screen overflow-y-auto">
+      <aside className="hidden lg:flex" style={{
+        flexDirection: 'column', width: 224,
+        minHeight: '100vh', position: 'sticky', top: 0, height: '100vh',
+        overflowY: 'auto',
+      }} className="sidebar hidden lg:flex">
         <NavContent />
       </aside>
 
@@ -103,39 +112,44 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setMobileOpen(false)}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+              style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(2px)' }}
+              className="lg:hidden"
             />
             <motion.aside
-              initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed left-0 top-0 bottom-0 z-50 w-72 lg:hidden flex flex-col"
-              style={{ background: 'rgba(6,20,40,0.98)', borderRight: '1px solid rgba(0,212,255,0.15)' }}>
+              initial={{ x: -260 }} animate={{ x: 0 }} exit={{ x: -260 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              style={{ position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 50, width: 248 }}
+              className="sidebar lg:hidden flex flex-col"
+            >
+              <div style={{ position: 'absolute', top: 16, right: 12 }}>
+                <button onClick={() => setMobileOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, borderRadius: 8, color: 'hsl(210 8% 58%)' }}>
+                  <X size={18} />
+                </button>
+              </div>
               <NavContent onClose={() => setMobileOpen(false)} />
             </motion.aside>
           </>
         )}
       </AnimatePresence>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Mobile Top Bar */}
-        <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-slate-800"
-          style={{ background: 'rgba(2,11,24,0.95)', backdropFilter: 'blur(20px)' }}>
-          <button onClick={() => setMobileOpen(true)}
-            className="p-2 rounded-xl border border-slate-700 text-slate-400 hover:text-foreground transition-colors">
-            <Menu className="w-5 h-5" />
+        <header className="lg:hidden" style={{
+          position: 'sticky', top: 0, zIndex: 30,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 16px',
+          background: 'hsl(0 0% 100%)',
+          borderBottom: '1px solid hsl(34 18% 88%)',
+        }}>
+          <button onClick={() => setMobileOpen(true)} style={{ background: 'none', border: '1px solid hsl(34 18% 88%)', cursor: 'pointer', padding: '7px 9px', borderRadius: 9 }}>
+            <Menu size={17} color="hsl(210 10% 38%)" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
-              <Activity className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-foreground text-sm">MediScan AI</span>
-          </div>
-          <div className="w-9" />
+          <Logo />
+          <div style={{ width: 38 }} />
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
+        <main style={{ flex: 1, padding: '28px 28px', overflowX: 'hidden' }}>
           {children}
         </main>
       </div>

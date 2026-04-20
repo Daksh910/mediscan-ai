@@ -20,7 +20,7 @@ export const MobileNav = () => {
       </button>
       {open && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-navy-900/80 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div className="absolute left-0 top-0 bottom-0 w-72 glass-card rounded-none animate-slide-in-right border-r border-cyan/15">
             <div className="p-4 flex justify-between items-center border-b border-cyan/10">
               <div className="flex items-center gap-2">

@@ -12,8 +12,8 @@ import api from '@/lib/api';
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'rgba(6,20,40,0.95)', border: '1px solid rgba(0,212,255,0.2)', borderRadius: 8, padding: '8px 12px' }}>
-      <p style={{ color: '#e2e8f0', marginBottom: 4, fontSize: 12 }}>{label}</p>
+    <div style={{ background: 'white', border: '1px solid hsl(34 18% 88%)', borderRadius: 8, padding: '8px 12px' }}>
+      <p style={{ color: 'hsl(210 15% 12%)', marginBottom: 4, fontSize: 12 }}>{label}</p>
       {payload.map((p: any, i: number) => (
         <p key={i} style={{ color: p.color, fontSize: 12, fontFamily: 'monospace' }}>{p.name}: {p.value}%</p>
       ))}
@@ -43,12 +43,12 @@ const formatDateShort = (dateStr: string) => {
 
 const getRiskColor = (level: string) => {
   const map: Record<string, string> = {
-    low: '#00ff88', Low: '#00ff88',
-    medium: '#ffb800', Medium: '#ffb800',
-    high: '#ff4757', High: '#ff4757',
-    critical: '#9d4edd', Critical: '#9d4edd',
+    low: '#2d9b6b', Low: '#2d9b6b',
+    medium: '#d97706', Medium: '#d97706',
+    high: '#e05c3a', High: '#e05c3a',
+    critical: '#c0293a', Critical: '#c0293a',
   };
-  return map[level] || '#00d4ff';
+  return map[level] || 'hsl(158 42% 30%)';
 };
 
 const genHealthLabel = (val: number) => {
@@ -167,8 +167,8 @@ const PatientDetail = () => {
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,212,255,0.05)" />
-                <XAxis dataKey="date" tick={{ fill: '#4a6080', fontSize: 12 }} axisLine={false} />
-                <YAxis tick={{ fill: '#4a6080', fontSize: 12 }} axisLine={false} domain={[0, 100]} />
+                <XAxis dataKey="date" tick={{ fill: 'hsl(210 10% 60%)', fontSize: 12 }} axisLine={false} />
+                <YAxis tick={{ fill: 'hsl(210 10% 60%)', fontSize: 12 }} axisLine={false} domain={[0, 100]} />
                 <Tooltip content={<CustomTooltip />} />
                 <Line
                   type="monotone" dataKey="score" stroke={riskColor}

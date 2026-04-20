@@ -19,35 +19,27 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <ThemeProvider>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Sonner toastOptions={{
-          style: {
-            background: 'linear-gradient(135deg, rgba(6,20,40,0.95), rgba(3,14,30,0.98))',
-            border: '1px solid rgba(0,212,255,0.15)',
-            color: '#e2e8f0',
-            backdropFilter: 'blur(20px)',
-          },
-        }} />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            
-            <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/patients" element={<Patients />} />
-            <Route path="/patients/:id" element={<PatientDetail />} />
-            <Route path="/assessment" element={<Assessment />} />
-            <Route path="/bulk-import" element={<BulkImport />} />
-            <Route path="/admin" element={<AdminPanel />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/"               element={<LandingPage />} />
+          <Route path="/login"          element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/dashboard"      element={<Dashboard />} />
+          <Route path="/patients"       element={<Patients />} />
+          <Route path="/patients/:id"   element={<PatientDetail />} />
+          <Route path="/assessment"     element={<Assessment />} />
+          <Route path="/bulk-import"    element={<BulkImport />} />
+          <Route path="/admin"          element={<AdminPanel />} />
+          <Route path="/profile"        element={<ProfilePage />} />
+          <Route path="*"               element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
     </QueryClientProvider>
-  </ThemeProvider>
+</ThemeProvider>
 );
 
 export default App;

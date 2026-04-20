@@ -2,10 +2,12 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { GlassCard } from '@/components/GlassCard';
-import { Upload, Download, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react';
+import { Upload, Download, CheckCircle, XCircle, AlertTriangle, FileText, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+
+const G = 'hsl(158 42% 22%)';
 
 const BulkImport = () => {
   const navigate = useNavigate();
@@ -19,19 +21,13 @@ const BulkImport = () => {
     try {
       const response = await api.get('/api/patients/bulk-import/template/', { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'patient_import_template.csv';
-      a.click();
+      const a = document.createElement('a'); a.href = url; a.download = 'patient_import_template.csv'; a.click();
       toast.success('Template downloaded!');
-    } catch {
-      toast.error('Failed to download template');
-    }
+    } catch { toast.error('Failed to download template'); }
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
+    e.preventDefault(); setDragging(false);
     const dropped = e.dataTransfer.files[0];
     if (dropped?.name.endsWith('.csv')) setFile(dropped);
     else toast.error('Please upload a CSV file');
@@ -40,171 +36,140 @@ const BulkImport = () => {
   const handleUpload = async () => {
     if (!file) return;
     setLoading(true);
-    const formData = new FormData();
-    formData.append('file', file);
+    const fd = new FormData(); fd.append('file', file);
     try {
-      const { data } = await api.post('/api/patients/bulk-import/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const { data } = await api.post('/api/patients/bulk-import/', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       setResult(data);
       if (data.created_count > 0) toast.success(`${data.created_count} patients imported!`);
       if (data.error_count > 0) toast.error(`${data.error_count} rows had errors`);
-    } catch {
-      toast.error('Import failed. Please check your CSV format.');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Import failed. Please check your CSV format.'); }
+    finally { setLoading(false); }
   };
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-3xl mx-auto">
-        <div className="flex items-center justify-between">
+      <div style={{ maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Bulk Import Patients</h2>
-            <p className="text-slate-400 text-sm mt-1">Upload a CSV file to add multiple patients at once</p>
+            <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 26, fontWeight: 600, margin: '0 0 4px' }}>Bulk Import</h1>
+            <p style={{ fontSize: 13, color: 'hsl(210 10% 52%)' }}>Upload a CSV to add multiple patients at once</p>
           </div>
-          <button onClick={downloadTemplate}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-sm hover:border-cyan-400/40 hover:text-cyan-400 transition-all">
-            <Download className="w-4 h-4" /> Download Template
+          <button onClick={downloadTemplate} className="btn-outline" style={{ fontSize: 13, padding: '9px 16px' }}>
+            <Download size={14} /> Download Template
           </button>
         </div>
 
-        {/* CSV Format Guide */}
+        {/* CSV format guide */}
         <GlassCard className="p-5">
-          <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-cyan-400" /> CSV Format
+          <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: 16, fontWeight: 600, margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FileText size={15} color={G} /> CSV Format
           </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs font-mono">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: 'DM Mono, monospace' }}>
               <thead>
-                <tr className="text-cyan-400 border-b border-slate-700/50">
+                <tr style={{ borderBottom: '1px solid hsl(34 18% 90%)' }}>
                   {['first_name*', 'last_name*', 'date_of_birth*', 'gender*', 'blood_group', 'contact', 'email', 'address'].map(h => (
-                    <th key={h} className="text-left py-2 px-2">{h}</th>
+                    <th key={h} style={{ textAlign: 'left', padding: '6px 10px', color: G, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                <tr className="text-slate-400">
-                  <td className="py-2 px-2">Rahul</td>
-                  <td className="py-2 px-2">Sharma</td>
-                  <td className="py-2 px-2">1985-06-15</td>
-                  <td className="py-2 px-2">M</td>
-                  <td className="py-2 px-2">A+</td>
-                  <td className="py-2 px-2">9876543210</td>
-                  <td className="py-2 px-2">rahul@email.com</td>
-                  <td className="py-2 px-2">Mumbai</td>
+                <tr>
+                  {['Rahul', 'Sharma', '1985-06-15', 'M', 'A+', '9876543210', 'rahul@email.com', 'Mumbai'].map((v, i) => (
+                    <td key={i} style={{ padding: '6px 10px', color: 'hsl(210 10% 48%)', whiteSpace: 'nowrap' }}>{v}</td>
+                  ))}
                 </tr>
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-slate-500 mt-3">* Required fields · Gender: M/F/O · Date: YYYY-MM-DD</p>
+          <p style={{ fontSize: 11.5, color: 'hsl(210 8% 60%)', marginTop: 12 }}>* Required fields · Gender: M/F/O · Date format: YYYY-MM-DD</p>
         </GlassCard>
 
-        {/* Upload Area */}
+        {/* Drop zone */}
         <div
           onDrop={handleDrop}
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onClick={() => fileRef.current?.click()}
-          className="relative border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all"
           style={{
-            borderColor: dragging ? '#00d4ff' : file ? '#00ff88' : 'rgba(0,212,255,0.2)',
-            background: dragging ? 'rgba(0,212,255,0.05)' : 'rgba(6,20,40,0.5)',
+            border: `2px dashed`,
+            borderColor: dragging ? G : file ? '#2d9b6b' : 'hsl(34 18% 82%)',
+            borderRadius: 14, padding: '48px 24px', textAlign: 'center', cursor: 'pointer',
+            background: dragging ? 'hsl(158 42% 22% / 0.04)' : file ? 'hsl(158 55% 38% / 0.04)' : 'transparent',
+            transition: 'all 0.15s',
           }}>
-          <input ref={fileRef} type="file" accept=".csv" className="hidden"
-            onChange={e => setFile(e.target.files?.[0] || null)} />
-
-          <Upload className="w-10 h-10 mx-auto mb-4" style={{ color: file ? '#00ff88' : '#00d4ff' }} />
-
+          <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={e => setFile(e.target.files?.[0] || null)} />
+          <Upload size={32} style={{ margin: '0 auto 14px', display: 'block', color: file ? '#2d9b6b' : G, opacity: 0.7 }} />
           {file ? (
             <div>
-              <p className="text-green-400 font-semibold">{file.name}</p>
-              <p className="text-slate-400 text-sm mt-1">{(file.size / 1024).toFixed(1)} KB · Ready to import</p>
+              <p style={{ fontWeight: 600, color: '#2d9b6b', fontSize: 14 }}>{file.name}</p>
+              <p style={{ fontSize: 12, color: 'hsl(210 8% 58%)', marginTop: 4 }}>{(file.size / 1024).toFixed(1)} KB · Ready to import</p>
             </div>
           ) : (
             <div>
-              <p className="text-foreground font-semibold mb-1">Drop your CSV file here</p>
-              <p className="text-slate-400 text-sm">or click to browse</p>
+              <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Drop your CSV file here</p>
+              <p style={{ fontSize: 13, color: 'hsl(210 10% 54%)' }}>or click to browse</p>
             </div>
           )}
         </div>
 
         {file && (
-          <div className="flex gap-3">
-            <button onClick={handleUpload} disabled={loading}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white transition-all disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #00d4ff, #2563eb)', boxShadow: '0 0 20px rgba(0,212,255,0.3)' }}>
-              {loading ? (
-                <><span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> Importing...</>
-              ) : (
-                <><Upload className="w-4 h-4" /> Import {file.name}</>
-              )}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={handleUpload} disabled={loading} className="btn-primary" style={{ flex: 1, padding: 12 }}>
+              {loading ? <><Loader2 size={15} className="animate-spin" /> Importing…</> : <><Upload size={15} /> Import {file.name}</>}
             </button>
-            <button onClick={() => { setFile(null); setResult(null); }}
-              className="px-5 py-3 rounded-xl border border-slate-700 text-slate-400 text-sm hover:border-slate-500 transition-all">
-              Clear
-            </button>
+            <button onClick={() => { setFile(null); setResult(null); }} className="btn-outline" style={{ padding: '12px 18px' }}>Clear</button>
           </div>
         )}
 
-        {/* Results */}
         <AnimatePresence>
           {result && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-              {/* Summary */}
-              <div className="grid grid-cols-3 gap-4">
+            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
                 {[
-                  { label: 'Created', value: result.created_count, color: '#00ff88', icon: CheckCircle },
-                  { label: 'Skipped', value: result.skipped_count, color: '#ffb800', icon: AlertTriangle },
-                  { label: 'Errors', value: result.error_count, color: '#ff4757', icon: XCircle },
+                  { label: 'Created', value: result.created_count, color: '#2d9b6b', icon: CheckCircle },
+                  { label: 'Skipped', value: result.skipped_count, color: '#d97706', icon: AlertTriangle },
+                  { label: 'Errors',  value: result.error_count,   color: '#e05c3a', icon: XCircle },
                 ].map(s => (
-                  <GlassCard key={s.label} className="p-4 text-center">
-                    <s.icon className="w-6 h-6 mx-auto mb-2" style={{ color: s.color }} />
-                    <p className="text-2xl font-bold font-mono" style={{ color: s.color }}>{s.value}</p>
-                    <p className="text-xs text-slate-400 mt-1">{s.label}</p>
+                  <GlassCard key={s.label} className="p-4" style={{ textAlign: 'center' }}>
+                    <s.icon size={22} style={{ color: s.color, margin: '0 auto 8px', display: 'block' }} />
+                    <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 28, fontWeight: 700, color: s.color }}>{s.value}</div>
+                    <div style={{ fontSize: 12, color: 'hsl(210 8% 58%)', marginTop: 4 }}>{s.label}</div>
                   </GlassCard>
                 ))}
               </div>
-
-              {/* Created list */}
               {result.created?.length > 0 && (
-                <GlassCard className="p-4">
-                  <h4 className="text-green-400 font-semibold text-sm mb-3 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" /> Successfully Created
+                <GlassCard className="p-5">
+                  <h4 style={{ fontSize: 14, fontWeight: 600, color: '#2d9b6b', display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
+                    <CheckCircle size={15} /> Successfully Created
                   </h4>
-                  <div className="space-y-1">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {result.created.map((p: any) => (
-                      <div key={p.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-green-400/5">
-                        <span className="text-foreground">{p.name}</span>
-                        <span className="text-slate-500 font-mono">ID: {p.id}</span>
+                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '8px 10px', borderRadius: 8, background: 'hsl(158 42% 38% / 0.05)' }}>
+                        <span>{p.name}</span>
+                        <span style={{ fontFamily: 'DM Mono, monospace', color: 'hsl(210 8% 58%)' }}>#{p.id}</span>
                       </div>
                     ))}
                   </div>
                 </GlassCard>
               )}
-
-              {/* Errors */}
               {result.errors?.length > 0 && (
-                <GlassCard className="p-4">
-                  <h4 className="text-red-400 font-semibold text-sm mb-3 flex items-center gap-2">
-                    <XCircle className="w-4 h-4" /> Errors
+                <GlassCard className="p-5">
+                  <h4 style={{ fontSize: 14, fontWeight: 600, color: '#e05c3a', display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
+                    <XCircle size={15} /> Errors
                   </h4>
-                  <div className="space-y-2">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {result.errors.map((e: any, i: number) => (
-                      <div key={i} className="text-xs p-3 rounded-lg bg-red-400/5 border border-red-400/10">
-                        <span className="text-red-400 font-mono">Row {e.row}:</span>
-                        <span className="text-slate-300 ml-2">{e.error}</span>
+                      <div key={i} style={{ fontSize: 12, padding: '8px 12px', borderRadius: 8, background: 'hsl(14 80% 52% / 0.05)', border: '1px solid hsl(14 80% 52% / 0.12)' }}>
+                        <span style={{ fontFamily: 'DM Mono, monospace', color: '#e05c3a' }}>Row {e.row}:</span>
+                        <span style={{ color: 'hsl(210 10% 40%)', marginLeft: 8 }}>{e.error}</span>
                       </div>
                     ))}
                   </div>
                 </GlassCard>
               )}
-
               {result.created_count > 0 && (
-                <button onClick={() => navigate('/patients')}
-                  className="w-full py-3 rounded-xl font-semibold text-sm text-white"
-                  style={{ background: 'linear-gradient(135deg, #00d4ff, #2563eb)' }}>
+                <button onClick={() => navigate('/patients')} className="btn-primary" style={{ width: '100%', padding: 12 }}>
                   View All Patients →
                 </button>
               )}

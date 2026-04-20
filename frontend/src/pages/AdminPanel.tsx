@@ -16,13 +16,13 @@ const ConfirmDialog = ({ open, title, message, onConfirm, onCancel, danger = tru
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+      style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(8px)' }}>
       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
         className="w-full max-w-sm p-6 rounded-2xl border"
-        style={{ background: 'rgba(6,20,40,0.98)', borderColor: danger ? 'rgba(255,71,87,0.3)' : 'rgba(0,212,255,0.2)' }}>
+        style={{ background: 'white', borderColor: danger ? 'hsl(14 80% 52% / 0.3)' : 'hsl(158 42% 22% / 0.2)' }}>
         <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
-          style={{ background: danger ? 'rgba(255,71,87,0.15)' : 'rgba(0,212,255,0.15)' }}>
-          <Trash2 className="w-5 h-5" style={{ color: danger ? '#ff4757' : '#00d4ff' }} />
+          style={{ background: danger ? 'hsl(14 80% 52% / 0.1)' : 'hsl(158 42% 22% / 0.1)' }}>
+          <Trash2 className="w-5 h-5" style={{ color: danger ? 'hsl(14 80% 52%)' : 'hsl(158 42% 22%)' }} />
         </div>
         <h3 className="text-foreground font-bold text-center mb-2">{title}</h3>
         <p className="text-slate-400 text-sm text-center mb-6">{message}</p>
@@ -33,7 +33,7 @@ const ConfirmDialog = ({ open, title, message, onConfirm, onCancel, danger = tru
           </button>
           <button onClick={onConfirm}
             className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold transition-all"
-            style={{ background: danger ? 'linear-gradient(135deg,#ff4757,#c0392b)' : 'linear-gradient(135deg,#00d4ff,#2563eb)' }}>
+            style={{ background: danger ? 'hsl(14 80% 52%)' : 'hsl(158 42% 22%)' }}>
             Delete Permanently
           </button>
         </div>
@@ -154,7 +154,7 @@ const AdminDashboard = () => {
     : assessments;
 
   const statCards = stats ? [
-    { label: 'Total Doctors', value: stats.doctors?.total || 0, sub: `${stats.doctors?.active || 0} active`, icon: Users, color: '#00d4ff' },
+    { label: 'Total Doctors', value: stats.doctors?.total || 0, sub: `${stats.doctors?.active || 0} active`, icon: Users, color: 'hsl(158 42% 22%)' },
     { label: 'Total Patients', value: stats.patients?.total || 0, sub: 'In database', icon: Activity, color: '#00ff88' },
     { label: 'Total Assessments', value: stats.assessments?.total || 0, sub: `${stats.assessments?.this_week || 0} this week`, icon: BarChart3, color: '#ffb800' },
     { label: 'Critical Cases', value: stats.assessments?.critical || 0, sub: 'Requires attention', icon: AlertTriangle, color: '#ff4757' },
@@ -163,7 +163,7 @@ const AdminDashboard = () => {
   const TABS = ['overview', 'doctors', 'patients', 'assessments'] as const;
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #020b18 0%, #030f1e 100%)' }}>
+    <div className="min-h-screen" style={{ background: 'hsl(34 25% 97%)' }}>
       <ConfirmDialog {...confirmDialog} open={!!confirmDialog} />
 
       {/* NAVBAR */}
@@ -202,7 +202,7 @@ const AdminDashboard = () => {
           </div>
           <div className="flex gap-2 flex-wrap">
             <button onClick={() => navigate('/bulk-import')}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-sm hover:border-cyan-400/40 hover:text-cyan-400 transition-all">
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-sm hover:border-green-700/40 hover:text-green-700 transition-all">
               <Upload className="w-4 h-4" /> Bulk Import
             </button>
             <button onClick={() => exportCSV('patients')}
@@ -240,7 +240,7 @@ const AdminDashboard = () => {
 
         {/* TABS */}
         <div className="flex gap-1 p-1 rounded-xl border border-slate-800 w-fit"
-          style={{ background: 'rgba(6,20,40,0.8)' }}>
+          style={{ background: 'hsl(34 18% 94%)' }}>
           {TABS.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-5 py-2.5 rounded-lg text-sm font-medium capitalize transition-all ${
@@ -262,7 +262,7 @@ const AdminDashboard = () => {
                 {[
                   { label: 'Active Doctors', value: stats?.doctors?.active || 0, color: '#00ff88' },
                   { label: 'Inactive Doctors', value: stats?.doctors?.inactive || 0, color: '#ff4757' },
-                  { label: 'This Week Assessments', value: stats?.assessments?.this_week || 0, color: '#00d4ff' },
+                  { label: 'This Week Assessments', value: stats?.assessments?.this_week || 0, color: 'hsl(158 42% 22%)' },
                   { label: 'This Month Assessments', value: stats?.assessments?.this_month || 0, color: '#ffb800' },
                   { label: 'Critical Risk Cases', value: stats?.assessments?.critical || 0, color: '#9d4edd' },
                 ].map(item => (
@@ -285,7 +285,7 @@ const AdminDashboard = () => {
                         <p className="text-xs text-slate-400">{d.department || 'N/A'}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-mono text-cyan-400">{d.assessment_count} assessments</span>
+                    <span className="text-xs font-mono text-green-700">{d.assessment_count} assessments</span>
                   </div>
                 ))}
               </div>
@@ -300,7 +300,7 @@ const AdminDashboard = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input value={searchDoctor} onChange={e => setSearchDoctor(e.target.value)}
                 placeholder="Search doctors..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/50 border border-slate-700 text-foreground text-sm focus:border-cyan-400 outline-none" />
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/50 border border-slate-700 text-foreground text-sm focus:border-green-700 outline-none" />
             </div>
             <div className="space-y-3">
               {filteredDoctors.map((d, i) => (
@@ -323,7 +323,7 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-cyan-400 hidden md:block">{d.assessment_count} assessments</span>
+                        <span className="text-xs font-mono text-green-700 hidden md:block">{d.assessment_count} assessments</span>
                         <span className={`text-xs px-2 py-1 rounded-full border font-medium hidden sm:block ${
                           d.is_active ? 'text-green-400 border-green-400/30 bg-green-400/10' : 'text-red-400 border-red-400/30 bg-red-400/10'
                         }`}>{d.is_active ? 'Active' : 'Inactive'}</span>
@@ -373,7 +373,7 @@ const AdminDashboard = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input value={searchPatient} onChange={e => setSearchPatient(e.target.value)}
                 placeholder="Search patients..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/50 border border-slate-700 text-foreground text-sm focus:border-cyan-400 outline-none" />
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/50 border border-slate-700 text-foreground text-sm focus:border-green-700 outline-none" />
             </div>
             <GlassCard className="p-4 overflow-x-auto">
               <table className="w-full text-sm">
@@ -402,7 +402,7 @@ const AdminDashboard = () => {
                       <td className="py-3 px-3">
                         {p.latest_risk ? <RiskBadge level={p.latest_risk} /> : <span className="text-slate-600 text-xs">None</span>}
                       </td>
-                      <td className="py-3 px-3 font-mono text-cyan-400 text-sm">{p.assessment_count}</td>
+                      <td className="py-3 px-3 font-mono text-green-700 text-sm">{p.assessment_count}</td>
                       <td className="py-3 px-3 text-slate-400 text-xs hidden lg:table-cell">{p.created_by}</td>
                       <td className="py-3 px-3 text-right">
                         <button onClick={() => deletePatient(p)}

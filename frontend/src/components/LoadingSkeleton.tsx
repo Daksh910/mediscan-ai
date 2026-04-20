@@ -1,27 +1,30 @@
+const Sk = ({ style }: { style?: React.CSSProperties }) => (
+  <div className="skeleton" style={{ height: 12, ...style }} />
+);
+
 export const LoadingSkeleton = ({ className = '' }: { className?: string }) => (
-  <div className={`animate-pulse rounded-lg bg-secondary/50 ${className}`} />
+  <div className={`skeleton ${className}`} />
 );
 
 export const CardSkeleton = () => (
-  <div className="glass-card p-6 space-y-4">
-    <LoadingSkeleton className="h-4 w-1/3" />
-    <LoadingSkeleton className="h-8 w-1/2" />
-    <LoadingSkeleton className="h-3 w-2/3" />
+  <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <Sk style={{ width: '40%', height: 11 }} />
+    <Sk style={{ width: '55%', height: 28, marginTop: 4 }} />
   </div>
 );
 
 export const ChartSkeleton = () => (
-  <div className="glass-card p-6 space-y-4">
-    <LoadingSkeleton className="h-4 w-1/4" />
-    <LoadingSkeleton className="h-48 w-full" />
+  <div className="card" style={{ padding: 20 }}>
+    <Sk style={{ width: '30%', height: 14, marginBottom: 16 }} />
+    <Sk style={{ height: 200 }} />
   </div>
 );
 
 export const TableSkeleton = () => (
-  <div className="glass-card p-6 space-y-3">
-    <LoadingSkeleton className="h-4 w-1/4" />
+  <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <Sk style={{ width: '30%', height: 14, marginBottom: 6 }} />
     {Array.from({ length: 5 }).map((_, i) => (
-      <LoadingSkeleton key={i} className="h-12 w-full" />
+      <Sk key={i} style={{ height: 40, opacity: 1 - i * 0.12 }} />
     ))}
   </div>
 );

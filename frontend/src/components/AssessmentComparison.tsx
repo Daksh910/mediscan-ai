@@ -81,7 +81,7 @@ export const AssessmentComparison = ({ assessments }: { assessments: any[] }) =>
             { label: 'Latest', assessment: latest, score: latestScore },
           ].map(({ label, assessment, score }) => (
             <div key={label} className="p-4 rounded-xl border border-slate-800 text-center"
-              style={{ background: 'rgba(6,20,40,0.5)' }}>
+              style={{ background: 'hsl(34 18% 95%)' }}>
               <p className="text-xs text-slate-400 mb-2">{label}</p>
               <p className="text-3xl font-black font-mono mb-2"
                 style={{ color: getRiskColor(assessment.risk_level) }}>
@@ -99,7 +99,7 @@ export const AssessmentComparison = ({ assessments }: { assessments: any[] }) =>
 
         {/* Field comparison */}
         <div className="rounded-xl border border-slate-800 overflow-hidden p-4"
-          style={{ background: 'rgba(6,20,40,0.5)' }}>
+          style={{ background: 'hsl(34 18% 95%)' }}>
           <div className="grid grid-cols-3 text-xs text-slate-500 uppercase tracking-widest pb-2 border-b border-slate-800 mb-1">
             <span>Indicator</span>
             <span className="text-center">Previous</span>
